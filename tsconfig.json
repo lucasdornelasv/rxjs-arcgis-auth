@@ -17,7 +17,13 @@
     "lib": [
       "es2018",
       "dom"
-    ]
+    ],
+    "paths": {
+      "esri-portal-auth": [
+        "dist/esri-portal-auth/esri-portal-auth",
+        "dist/esri-portal-auth"
+      ]
+    }
   },
   "angularCompilerOptions": {
     "fullTemplateTypeCheck": true,

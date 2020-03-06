@@ -2,5 +2,46 @@
   "$schema": "./node_modules/@angular/cli/lib/config/schema.json",
   "version": 1, 
   "newProjectRoot": "projects",
-  "projects": {}
+  "projects": {
+    "esri-portal-auth": {
+      "projectType": "library",
+      "root": "projects/esri-portal-auth",
+      "sourceRoot": "projects/esri-portal-auth/src",
+      "prefix": "lib",
+      "architect": {
+        "build": {
+          "builder": "@angular-devkit/build-ng-packagr:build",
+          "options": {
+            "tsConfig": "projects/esri-portal-auth/tsconfig.lib.json",
+            "project": "projects/esri-portal-auth/ng-package.json"
+          },
+          "configurations": {
+            "production": {
+              "tsConfig": "projects/esri-portal-auth/tsconfig.lib.prod.json"
+            }
+          }
+        },
+        "test": {
+          "builder": "@angular-devkit/build-angular:karma",
+          "options": {
+            "main": "projects/esri-portal-auth/src/test.ts",
+            "tsConfig": "projects/esri-portal-auth/tsconfig.spec.json",
+            "karmaConfig": "projects/esri-portal-auth/karma.conf.js"
+          }
+        },
+        "lint": {
+          "builder": "@angular-devkit/build-angular:tslint",
+          "options": {
+            "tsConfig": [
+              "projects/esri-portal-auth/tsconfig.lib.json",
+              "projects/esri-portal-auth/tsconfig.spec.json"
+            ],
+            "exclude": [
+              "**/node_modules/**"
+            ]
+          }
+        }
+      }
+    }},
+  "defaultProject": "esri-portal-auth"
 }
