@@ -1,0 +1,44 @@
+{
+  "name": "@rxjs-arcgis-auth/core",
+  "version": "0.0.1",
+  "description": "",
+  "author": "Lucas Dornelas",
+  "license": "ISC",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/lucasdornelasv/rxjs-arcgis-auth"
+  },
+  "main": "dist/index.js",
+  "typings": "dist/index.d.ts",
+  "scripts": {
+    "prebuild": "npm run clean",
+    "clean": "rimraf dist",
+    "build": "tsc",
+    "test": "jest"
+  },
+  "jest": {
+    "transform": {
+      "^.+\\.tsx?$": "ts-jest"
+    },
+    "moduleFileExtensions": [
+      "ts",
+      "js"
+    ],
+    "testRegex": "^.+\\.spec\\.ts$"
+  },
+  "dependencies": {
+    "esri-loader": "^2.13.0",
+    "rxjs": "^6.5.4"
+  },
+  "peerDependencies": {
+    "tslib": "^1.11.1"
+  },
+  "devDependencies": {
+    "@types/jest": "^24.0.23",
+    "jest": "^24.9.0",
+    "rimraf": "^3.0.0",
+    "ts-jest": "^24.1.0",
+    "tslib": "^1.11.1",
+    "typescript": "^3.8.3"
+  }
+}
