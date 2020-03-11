@@ -10,6 +10,8 @@ export class RxArcgisPortalAuthService {
 
   private esriLoadOptions: ILoadScriptOptions;
 
+  private oAuthInfoRegistered = false;
+
   constructor(private options: ArcgisAuthOptions) {
     if (options.storage === 'session') {
       this.storage = sessionStorage;
@@ -72,9 +74,22 @@ export class RxArcgisPortalAuthService {
   destroyCredentials() {
     return defer(() => {
       return from(
-        loadModules(['esri/identity/IdentityManager'], this.esriLoadOptions)
+        loadModules(
+          ['esri/identity/OAuthInfo', 'esri/identity/IdentityManager'],
+          this.esriLoadOptions
+        )
       ).pipe(
-        tap(([IdentityManager]) => {
+        tap(([OAuthInfo, IdentityManager]) => {
+          if (!this.oAuthInfoRegistered) {
+            const info = new OAuthInfo({
+              portalUrl: this.options.portalUrl,
+              appId: this.options.portalAppId,
+              popup: !!this.options.popup
+            });
+            IdentityManager.registerOAuthInfos([info]);
+
+            this.oAuthInfoRegistered = true;
+          }
           IdentityManager.destroyCredentials();
           this.storage.removeItem(this.storageKey);
         }),
@@ -100,13 +115,19 @@ export class RxArcgisPortalAuthService {
                 return;
               }
 
-              const info = new OAuthInfo({
-                portalUrl: this.options.portalUrl,
-                appId: this.options.portalAppId,
-                popup: !!this.options.popup
-              });
-
-              IdentityManager.registerOAuthInfos([info]);
+              let info;
+              if (!this.oAuthInfoRegistered) {
+                info = new OAuthInfo({
+                  portalUrl: this.options.portalUrl,
+                  appId: this.options.portalAppId,
+                  popup: !!this.options.popup
+                });
+                IdentityManager.registerOAuthInfos([info]);
+    
+                this.oAuthInfoRegistered = true;
+              } else {
+                info = IdentityManager.findOAuthInfo(this.options.portalUrl);
+              }
 
               const resolveFn = portalUser => {
                 if (subscriber.closed) {
