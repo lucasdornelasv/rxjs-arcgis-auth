@@ -136,7 +136,13 @@ export class RxArcgisPortalAuthService {
         (subscriber) => {
           subscriber.add(
             asyncScheduler.schedule(() => {
-              loadModules(
+              loadModules<
+                [
+                  __esri.PortalConstructor,
+                  __esri.OAuthInfoConstructor,
+                  __esri.IdentityManager
+                ]
+              >(
                 [
                   'esri/portal/Portal',
                   'esri/identity/OAuthInfo',
@@ -149,7 +155,7 @@ export class RxArcgisPortalAuthService {
                     return;
                   }
 
-                  let info;
+                  let info: __esri.OAuthInfo;
                   if (!this.oAuthInfoRegistered) {
                     info = new OAuthInfo({
                       portalUrl: this.options.portalUrl,
@@ -174,8 +180,15 @@ export class RxArcgisPortalAuthService {
                       url: this.options.portalUrl,
                       user: portalUser,
                     });
+
+                    const controller = new AbortController();
+                    const signal = controller.signal;
+
+                    subscriber.add(() => {
+                      controller.abort();
+                    });
                     portal
-                      .load()
+                      .load(signal)
                       .then((data) => {
                         if (subscriber.closed) {
                           return;
@@ -210,7 +223,10 @@ export class RxArcgisPortalAuthService {
                   const url = info.portalUrl + '/sharing';
                   IdentityManager.checkSignInStatus(url)
                     .then((portalUser) => resolveFn(portalUser))
-                    .otherwise(() => {
+                    .catch(() => {
+                      if (subscriber.closed) {
+                        return;
+                      }
                       IdentityManager.getCredential(url)
                         .then((portalUser) => resolveFn(portalUser))
                         .catch((err) => {

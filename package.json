@@ -1,6 +1,6 @@
 {
   "name": "@rxjs-arcgis-auth/core",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "description": "",
   "author": "Lucas Dornelas",
   "license": "ISC",
@@ -34,6 +34,7 @@
     "tslib": "^1.11.1"
   },
   "devDependencies": {
+    "@types/arcgis-js-api": "^4.16.0",
     "@types/jest": "^24.0.23",
     "jest": "^24.9.0",
     "rimraf": "^3.0.0",
