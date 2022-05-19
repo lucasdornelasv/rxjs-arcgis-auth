@@ -115,7 +115,7 @@ export class RxArcgisPortalAuthService {
               this.oAuthInfoRegistered = true;
             }
             IdentityManager.destroyCredentials();
-            this._authInfoSubject.next(undefined);
+            this._authInfoSubject.next(undefined as any);
           }),
           observeOn(asyncScheduler)
         );
