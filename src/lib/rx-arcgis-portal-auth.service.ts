@@ -6,38 +6,33 @@ import {
   from,
   Subject,
   BehaviorSubject,
-} from 'rxjs';
-import { ArcgisAuthOptions } from './arcgis-auth-options';
-import { ArcgisAuthInfoLike } from './arcgis-auth-info.model';
+} from "rxjs";
+import { ArcgisAuthOptions } from "./arcgis-auth-options";
+import { ArcgisAuthInfoLike } from "./arcgis-auth-info.model";
 import {
   map,
   subscribeOn,
   observeOn,
-  flatMap,
+  mergeMap,
   tap,
   share,
   finalize,
   shareReplay,
   first,
-} from 'rxjs/operators';
-import { ILoadScriptOptions, loadModules } from 'esri-loader';
+} from "rxjs/operators";
+
+import OAuthInfo from "@arcgis/core/identity/OAuthInfo";
+import IdentityManager from "@arcgis/core/identity/IdentityManager";
+import Portal from "@arcgis/core/portal/Portal";
 
 export class RxArcgisPortalAuthService {
-  private esriLoadOptions: ILoadScriptOptions;
-
   private oAuthInfoRegistered = false;
 
   private _authInfoSubject: Subject<string>;
 
-  private _destroyCredentialsObservable?: Observable<any>;
   private _requireAuthInfoObservable?: Observable<ArcgisAuthInfoLike>;
 
   constructor(private options: ArcgisAuthOptions) {
-    this.esriLoadOptions = {
-      version: options.arcgisVersion ?? '4.16',
-      css: !!(options.css ?? options.popup),
-    };
-
     this._authInfoSubject = new BehaviorSubject(undefined as any);
   }
 
@@ -48,12 +43,7 @@ export class RxArcgisPortalAuthService {
   isAuthorized() {
     return this.getAuthInfo().pipe(
       map((authInfo) => {
-        if (
-          authInfo &&
-          authInfo.token &&
-          authInfo.expiresAt &&
-          Date.now() < authInfo.expiresAt
-        ) {
+        if (Date.now() < (authInfo?.expiresAt ?? 0)) {
           return true;
         }
         return false;
@@ -63,7 +53,7 @@ export class RxArcgisPortalAuthService {
 
   requireAuthorizedAsync() {
     return this.requireAuthInfo()
-      .pipe(flatMap(() => this.isAuthorized()))
+      .pipe(mergeMap(() => this.isAuthorized()))
       .toPromise();
   }
 
@@ -78,166 +68,104 @@ export class RxArcgisPortalAuthService {
         }
 
         return authInfo;
-      })
+      }),
+      observeOn(asyncScheduler)
     );
   }
 
   getAuthInfo(): Observable<ArcgisAuthInfoLike | null> {
-    return this.listenAuthInfo().pipe(first(), observeOn(asyncScheduler));
+    return this.listenAuthInfo().pipe(first());
   }
 
   getToken(): Observable<string | null> {
     return this.getAuthInfo().pipe(
       map((authInfo) => {
-        return authInfo && authInfo.token ? authInfo.token : null;
+        return authInfo?.token ?? null;
       })
     );
   }
 
   destroyCredentials() {
-    if (!this._destroyCredentialsObservable) {
-      this._destroyCredentialsObservable = defer(() => {
-        return from(
-          loadModules(
-            ['esri/identity/OAuthInfo', 'esri/identity/IdentityManager'],
-            this.esriLoadOptions
-          )
-        ).pipe(
-          tap(([OAuthInfo, IdentityManager]) => {
-            if (!this.oAuthInfoRegistered) {
-              const info = new OAuthInfo({
-                portalUrl: this.options.portalUrl,
-                appId: this.options.portalAppId,
-                popup: !!this.options.popup,
-              });
-              IdentityManager.registerOAuthInfos([info]);
+    if (!this.oAuthInfoRegistered) {
+      const info = new OAuthInfo({
+        portalUrl: this.options.portalUrl,
+        appId: this.options.portalAppId,
+        popup: !!this.options.popup,
+      });
+      IdentityManager.registerOAuthInfos([info]);
 
-              this.oAuthInfoRegistered = true;
-            }
-            IdentityManager.destroyCredentials();
-            this._authInfoSubject.next(undefined as any);
-          }),
-          observeOn(asyncScheduler)
-        );
-      }).pipe(
-        subscribeOn(asyncScheduler),
-        finalize(() => {
-          this._destroyCredentialsObservable = undefined;
-        }),
-        shareReplay()
-      );
+      this.oAuthInfoRegistered = true;
     }
-    return this._destroyCredentialsObservable;
+
+    IdentityManager.destroyCredentials();
+    this._authInfoSubject.next(undefined as any);
   }
 
   requireAuthInfo() {
     if (!this._requireAuthInfoObservable) {
       this._requireAuthInfoObservable = new Observable<ArcgisAuthInfoLike>(
         (subscriber) => {
-          subscriber.add(
-            asyncScheduler.schedule(() => {
-              loadModules<
-                [
-                  __esri.PortalConstructor,
-                  __esri.OAuthInfoConstructor,
-                  __esri.IdentityManager
-                ]
-              >(
-                [
-                  'esri/portal/Portal',
-                  'esri/identity/OAuthInfo',
-                  'esri/identity/IdentityManager',
-                ],
-                this.esriLoadOptions
-              )
-                .then(([Portal, OAuthInfo, IdentityManager]) => {
-                  if (subscriber.closed) {
-                    return;
-                  }
+          let info: __esri.OAuthInfo;
+          if (!this.oAuthInfoRegistered) {
+            info = new OAuthInfo({
+              portalUrl: this.options.portalUrl,
+              appId: this.options.portalAppId,
+              popup: !!this.options.popup,
+            });
+            IdentityManager.registerOAuthInfos([info]);
 
-                  let info: __esri.OAuthInfo;
-                  if (!this.oAuthInfoRegistered) {
-                    info = new OAuthInfo({
-                      portalUrl: this.options.portalUrl,
-                      appId: this.options.portalAppId,
-                      popup: !!this.options.popup,
-                    });
-                    IdentityManager.registerOAuthInfos([info]);
+            this.oAuthInfoRegistered = true;
+          } else {
+            info = IdentityManager.findOAuthInfo(this.options.portalUrl);
+          }
 
-                    this.oAuthInfoRegistered = true;
-                  } else {
-                    info = IdentityManager.findOAuthInfo(
-                      this.options.portalUrl
-                    );
-                  }
+          const resolveFn = (portalUser) => {
+            if (subscriber.closed) {
+              return Promise.resolve();
+            }
 
-                  const resolveFn = (portalUser) => {
-                    if (subscriber.closed) {
-                      return;
-                    }
+            const portal = new Portal({
+              url: this.options.portalUrl,
+              user: portalUser,
+            });
 
-                    const portal = new Portal({
-                      url: this.options.portalUrl,
-                      user: portalUser,
-                    });
+            const controller = new AbortController();
+            const signal = controller.signal;
 
-                    const controller = new AbortController();
-                    const signal = controller.signal;
+            subscriber.add(() => {
+              controller.abort();
+            });
 
-                    subscriber.add(() => {
-                      controller.abort();
-                    });
-                    portal
-                      .load(signal)
-                      .then((data) => {
-                        if (subscriber.closed) {
-                          return;
-                        }
+            return portal.load(signal).then((data) => {
+              if (subscriber.closed) {
+                return;
+              }
 
-                        const userData = data.user.sourceJSON;
-                        const authInfo: ArcgisAuthInfoLike = {
-                          token: portalUser.token,
-                          username: userData.username,
-                          userLevel: userData.level,
-                          roleId: userData.roleId,
-                          expiresAt: portalUser.expires,
-                        };
+              const userData = data.user.sourceJSON;
+              const authInfo: ArcgisAuthInfoLike = {
+                token: portalUser.token,
+                username: userData.username,
+                userLevel: userData.level,
+                roleId: userData.roleId,
+                expiresAt: portalUser.expires,
+              };
 
-                        this._authInfoSubject.next(JSON.stringify(authInfo));
-                        subscriber.add(
-                          asyncScheduler.schedule(() => {
-                            subscriber.next(authInfo);
-                            subscriber.complete();
-                          })
-                        );
-                      })
-                      .catch((err) => {
-                        if (subscriber.closed) {
-                          return;
-                        }
+              this._authInfoSubject.next(JSON.stringify(authInfo));
 
-                        subscriber.error(err);
-                      });
-                  };
+              subscriber.next(authInfo);
+              subscriber.complete();
+            });
+          };
 
-                  const url = info.portalUrl + '/sharing';
-                  IdentityManager.checkSignInStatus(url)
-                    .then((portalUser) => resolveFn(portalUser))
-                    .catch(() => {
-                      if (subscriber.closed) {
-                        return;
-                      }
-                      IdentityManager.getCredential(url)
-                        .then((portalUser) => resolveFn(portalUser))
-                        .catch((err) => {
-                          if (subscriber.closed) {
-                            return;
-                          }
-
-                          subscriber.error(err);
-                        });
-                    });
-                })
+          const url = info.portalUrl + "/sharing";
+          IdentityManager.checkSignInStatus(url)
+            .then((portalUser) => resolveFn(portalUser))
+            .catch(() => {
+              if (subscriber.closed) {
+                return;
+              }
+              IdentityManager.getCredential(url)
+                .then((portalUser) => resolveFn(portalUser))
                 .catch((err) => {
                   if (subscriber.closed) {
                     return;
@@ -245,15 +173,9 @@ export class RxArcgisPortalAuthService {
 
                   subscriber.error(err);
                 });
-            })
-          );
+            });
         }
-      ).pipe(
-        finalize(() => {
-          this._requireAuthInfoObservable = undefined;
-        }),
-        shareReplay()
-      );
+      ).pipe(observeOn(asyncScheduler), share());
     }
 
     return this._requireAuthInfoObservable;

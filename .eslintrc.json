@@ -1,0 +1,32 @@
+{
+	"env": {
+		"browser": true,
+		"es2021": true
+	},
+	"parser": "@typescript-eslint/parser",
+	"plugins": ["@typescript-eslint", "prettier"],
+	"extends": ["eslint:recommended", "plugin:@typescript-eslint/recommended", "prettier"],
+	"parserOptions": {
+		"ecmaVersion": 2021,
+		"sourceType": "module"
+	},
+	"rules": {
+		"prettier/prettier": ["warn"],
+		"max-len": "off",
+		"no-plusplus": "off",
+		"no-unreachable": "off",
+		"no-console": "warn",
+		"no-alert": "warn",
+		"import/no-amd": "off",
+		"class-methods-use-this": "off",
+		"no-unused-vars": "off",
+		"new-parens": "off",
+		"no-undef": "off",
+		"max-classes-per-file": "off",
+		"prefer-rest-params": "off",
+		"no-param-reassign": "off",
+		"no-underscore-dangle": "off",
+		"import/no-extraneous-dependencies": "off"
+	}
+}
+
