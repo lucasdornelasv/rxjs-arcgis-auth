@@ -136,15 +136,20 @@ export class RxArcgisPortalAuthService {
               controller.abort();
             });
 
-            return portal.load(signal).then((data) => {
+            return portal.load(signal).then(() => {
               if (subscriber.closed) {
                 return;
               }
 
-              const userData = data.user.sourceJSON;
+              const userData = portal.user.sourceJSON;
               const authInfo: ArcgisAuthInfoLike = {
                 token: portalUser.token,
+                userId: userData.id,
                 username: userData.username,
+                email: userData.email,
+                firstName: userData.firstName,
+                lastName: userData.lastName,
+                fullName: userData.fullName,
                 userLevel: userData.level,
                 roleId: userData.roleId,
                 expiresAt: portalUser.expires,
