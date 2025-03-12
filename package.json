@@ -1,6 +1,6 @@
 {
   "name": "@rxjs-arcgis-auth/core",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "",
   "author": "Lucas Dornelas",
   "license": "MIT",
@@ -41,11 +41,12 @@
     "emptyLinesBetweenGroups": false
   },
   "peerDependencies": {
-    "tslib": "^2.3.0",
     "@arcgis/core": "^4.24.7",
-    "rxjs": "^7.5.0"
+    "rxjs": "^7.5.0",
+    "tslib": "^2.3.0"
   },
   "devDependencies": {
+    "@arcgis/core": "^4.32.8",
     "@types/jest": "26.0.22",
     "@typescript-eslint/eslint-plugin": "^5.20.0",
     "@typescript-eslint/parser": "^5.20.0",
@@ -57,11 +58,10 @@
     "prettier": "2.6.2",
     "prettier-eslint": "^13.0.0",
     "rimraf": "^3.0.2",
+    "rxjs": "^7.5.0",
     "ts-jest": "26.5.4",
     "ts-node": "^9.1.1",
     "typescript": "^4.2.4",
-    "typescript-snapshots-plugin": "^1.7.0",
-    "@arcgis/core": "^4.24.7",
-    "rxjs": "^7.5.0"
+    "typescript-snapshots-plugin": "^1.7.0"
   }
 }
